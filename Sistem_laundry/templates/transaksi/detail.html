@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% block title %}{{ trx.kode_transaksi }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+    <a href="{{ url_for('transaksi_list') }}">← Kembali ke Daftar Transaksi</a>
+</div>
+
+<div class="page-header">
+    <h1 class="page-title">📄 {{ trx.kode_transaksi }}</h1>
+    <span class="text-muted" style="font-size:0.85rem;">Masuk: {{ trx.tanggal_masuk }}</span>
+</div>
+
+<div class="detail-grid">
+
+    <!-- ══ KOLOM KIRI: Informasi Transaksi ══ -->
+    <div>
+        <div class="card detail-info">
+            <div class="card-title">ℹ️ Informasi Transaksi</div>
+            <table>
+                <tr>
+                    <td>ID Transaksi</td>
+                    <td><strong>{{ trx.kode_transaksi }}</strong></td>
+                </tr>
+                <tr>
+                    <td>Pelanggan</td>
+                    <td>{{ trx.nama_pelanggan }}</td>
+                </tr>
+                <tr>
+                    <td>Nomor HP</td>
+                    <td>{{ trx.no_hp }}</td>
+                </tr>
+                <tr>
+                    <td>Jenis Layanan</td>
+                    <td>{{ trx.nama_layanan }}</td>
+                </tr>
+                <tr>
+                    <td>Tarif</td>
+                    <td>{{ trx.tarif_per_kg | rupiah }} / kg</td>
+                </tr>
+                <tr>
+                    <td>Berat Cucian</td>
+                    <td>{{ trx.berat_kg }} kg</td>
+                </tr>
+                <tr>
+                    <td>Total Harga</td>
+                    <td><strong style="font-size:1.1rem; color:#1a3c5e;">{{ trx.total_harga | rupiah }}</strong></td>
+                </tr>
+                <tr>
+                    <td>Tanggal Masuk</td>
+                    <td>{{ trx.tanggal_masuk }}</td>
+                </tr>
+                {% if trx.catatan %}
+                <tr>
+                    <td>Catatan</td>
+                    <td>{{ trx.catatan }}</td>
+                </tr>
+                {% endif %}
+            </table>
+        </div>
+
+        <!-- Riwayat Status -->
+        <div class="card">
+            <div class="card-title">🕐 Riwayat Status</div>
+            <ul class="timeline">
+                {% for s in status_flow %}
+                    {% set idx_s = status_flow.index(s) %}
+                    {% set idx_now = status_flow.index(trx.status_pengerjaan) %}
+                    <li class="timeline-item
+                        {{ 'done' if idx_s < idx_now }}
+                        {{ 'current' if idx_s == idx_now }}">
+                        <span>{{ s }}</span>
+                        {% if idx_s < idx_now %}
+                            <span class="timeline-time">✅ selesai</span>
+                        {% elif idx_s == idx_now %}
+                            <span class="timeline-time">⬅ saat ini</span>
+                        {% else %}
+                            <span class="timeline-time text-muted">—</span>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- ══ KOLOM KANAN: Panel Aksi ══ -->
+    <div>
+        <div class="action-card">
+
+            <!-- Status Pengerjaan -->
+            <h4>Status Pengerjaan</h4>
+            {% set s = trx.status_pengerjaan %}
+            <span class="status-badge-lg badge
+                badge-{{ s.lower().replace(' ', '-') }}">
+                {{ s }}
+            </span>
+
+            <!-- Tombol Ubah Status Berurutan (VR-06 & VR-07) -->
+            {% if status_berikutnya %}
+                {% if status_berikutnya == 'Diambil' and trx.status_pembayaran != 'Lunas' %}
+                    <!-- Dinonaktifkan: Belum lunas -->
+                    <div class="tooltip" style="display:block;">
+                        <button class="btn btn-primary w-100 disabled" disabled>
+                            → Tandai {{ status_berikutnya }}
+                        </button>
+                        <span class="tooltiptext">Pembayaran belum lunas — tidak dapat diambil</span>
+                    </div>
+                {% else %}
+                    <form action="{{ url_for('transaksi_ubah_status', tid=trx.id) }}"
+                          method="POST">
+                        <input type="hidden" name="status" value="{{ status_berikutnya }}">
+                        <button type="submit" class="btn btn-primary w-100"
+                                onclick="return confirm('Ubah status transaksi ke {{ status_berikutnya }}?')">
+                            → Tandai {{ status_berikutnya }}
+                        </button>
+                    </form>
+                {% endif %}
+            {% else %}
+                <div class="text-muted text-center" style="font-size:0.85rem; padding: 8px 0;">
+                    ✓ Status sudah final (Diambil).
+                </div>
+            {% endif %}
+
+            <hr class="action-divider">
+
+            <!-- Status Pembayaran -->
+            <h4>Status Pembayaran</h4>
+            {% if trx.status_pembayaran == 'Lunas' %}
+                <span class="status-badge-lg badge badge-lunas">✅ LUNAS</span>
+                <div class="text-muted text-center" style="font-size:0.8rem;">Pembayaran telah diterima.</div>
+            {% else %}
+                <span class="status-badge-lg badge badge-belum-lunas">❌ BELUM LUNAS</span>
+                <form action="{{ url_for('transaksi_lunas', tid=trx.id) }}" method="POST">
+                    <button type="submit" class="btn btn-success w-100"
+                            onclick="return confirm('Konfirmasi pembayaran {{ trx.total_harga | rupiah }} sebagai Lunas?')">
+                        💳 Tandai Lunas
+                    </button>
+                </form>
+            {% endif %}
+
+            <hr class="action-divider">
+
+            <!-- Tombol Hapus (VR-08) -->
+            {% if trx.status_pengerjaan == 'Diterima' %}
+                <form action="{{ url_for('transaksi_hapus', tid=trx.id) }}" method="POST">
+                    <button type="submit" class="btn btn-danger w-100"
+                            onclick="return konfirmasiHapus('Hapus transaksi {{ trx.kode_transaksi }}? Tindakan ini tidak dapat dibatalkan.')">
+                        🗑️ Hapus Transaksi
+                    </button>
+                </form>
+            {% else %}
+                <div class="tooltip" style="display:block;">
+                    <button class="btn btn-danger w-100 disabled" disabled>
+                        🗑️ Hapus Transaksi
+                    </button>
+                    <span class="tooltiptext">Hanya transaksi berstatus Diterima yang dapat dihapus</span>
+                </div>
+            {% endif %}
+
+        </div><!-- /action-card -->
+    </div>
+</div><!-- /detail-grid -->
+{% endblock %}

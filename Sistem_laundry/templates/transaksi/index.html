@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% block title %}Daftar Transaksi{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">📋 Daftar Transaksi</h1>
+    <a href="{{ url_for('transaksi_tambah') }}" class="btn btn-primary">➕ Transaksi Baru</a>
+</div>
+
+<!-- ══ FILTER BAR ══ -->
+<form method="GET" action="{{ url_for('transaksi_list') }}">
+    <div class="filter-bar">
+        <div class="filter-group">
+            <label>Cari</label>
+            <input type="text" name="cari" value="{{ f_cari }}"
+                   placeholder="Nama / ID Transaksi...">
+        </div>
+        <div class="filter-group">
+            <label>Status Pengerjaan</label>
+            <select name="status">
+                <option value="">Semua Status</option>
+                {% for s in status_list %}
+                <option value="{{ s }}" {{ 'selected' if f_status == s }}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Status Bayar</label>
+            <select name="bayar">
+                <option value="">Semua</option>
+                <option value="Belum Lunas" {{ 'selected' if f_bayar == 'Belum Lunas' }}>Belum Lunas</option>
+                <option value="Lunas"       {{ 'selected' if f_bayar == 'Lunas' }}>Lunas</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>&nbsp;</label>
+            <div style="display:flex; gap:6px;">
+                <button type="submit" class="btn btn-primary">🔍 Terapkan</button>
+                <a href="{{ url_for('transaksi_list') }}" class="btn btn-secondary">↺ Reset</a>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- ══ TABEL TRANSAKSI ══ -->
+<div class="card" style="padding: 0; overflow: hidden;">
+    {% if transaksi %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID Transaksi</th>
+                    <th>Pelanggan</th>
+                    <th>Layanan</th>
+                    <th>Berat</th>
+                    <th>Total Harga</th>
+                    <th>Status</th>
+                    <th>Bayar</th>
+                    <th>Tgl Masuk</th>
+                    <th style="min-width: 250px; text-align: center;">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in transaksi %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('transaksi_detail', tid=t.id) }}" class="fw-bold" title="Lihat detail transaksi">
+                            {{ t.kode_transaksi }}
+                        </a>
+                    </td>
+                    <td>{{ t.nama_pelanggan }}</td>
+                    <td>{{ t.nama_layanan }}</td>
+                    <td>{{ t.berat_kg }} kg</td>
+                    <td class="fw-bold">{{ t.total_harga | rupiah }}</td>
+                    <td>
+                        {% set s = t.status_pengerjaan %}
+                        <span class="badge badge-{{ s.lower().replace(' ', '-') }}">
+                            {{ s }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if t.status_pembayaran == 'Lunas' %}
+                            <span class="badge badge-lunas">✅ Lunas</span>
+                        {% else %}
+                            <span class="badge badge-belum-lunas">❌ Belum Lunas</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted">{{ t.tanggal_masuk }}</td>
+                    <td>
+                        <div style="display: flex; gap: 5px; align-items: center; justify-content: center; flex-wrap: wrap;">
+                            
+                            <!-- 1. Tombol Ubah Status Berurutan (VR-06 & VR-07) -->
+                            {% if t.status_pengerjaan == 'Diterima' %}
+                                <form action="{{ url_for('transaksi_ubah_status', tid=t.id) }}" method="POST" style="display:inline;">
+                                    <input type="hidden" name="status" value="Diproses">
+                                    <button type="submit" class="btn btn-sm btn-primary" title="Ubah status menjadi Diproses">
+                                        → Diproses
+                                    </button>
+                                </form>
+                            {% elif t.status_pengerjaan == 'Diproses' %}
+                                <form action="{{ url_for('transaksi_ubah_status', tid=t.id) }}" method="POST" style="display:inline;">
+                                    <input type="hidden" name="status" value="Selesai">
+                                    <button type="submit" class="btn btn-sm btn-primary" title="Ubah status menjadi Selesai">
+                                        → Selesai
+                                    </button>
+                                </form>
+                            {% elif t.status_pengerjaan == 'Selesai' %}
+                                {% if t.status_pembayaran == 'Lunas' %}
+                                    <form action="{{ url_for('transaksi_ubah_status', tid=t.id) }}" method="POST" style="display:inline;">
+                                        <input type="hidden" name="status" value="Diambil">
+                                        <button type="submit" class="btn btn-sm btn-primary" title="Ubah status menjadi Diambil">
+                                            → Diambil
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <button class="btn btn-sm btn-secondary disabled" disabled title="Pembayaran belum lunas — cucian belum dapat diambil">
+                                        → Diambil
+                                    </button>
+                                {% endif %}
+                            {% else %}
+                                <button class="btn btn-sm btn-secondary disabled" disabled title="Status transaksi sudah final (Diambil)">
+                                    ✓ Diambil
+                                </button>
+                            {% endif %}
+
+                            <!-- 2. Tombol Tandai Lunas -->
+                            {% if t.status_pembayaran == 'Belum Lunas' %}
+                                <form action="{{ url_for('transaksi_lunas', tid=t.id) }}" method="POST" style="display:inline;">
+                                    <button type="submit" class="btn btn-sm btn-success"
+                                            onclick="return confirm('Tandai pembayaran transaksi {{ t.kode_transaksi }} sebagai Lunas?')"
+                                            title="Tandai Pembayaran Lunas">
+                                        💳 Lunas
+                                    </button>
+                                </form>
+                            {% else %}
+                                <button class="btn btn-sm btn-secondary disabled" disabled title="Pembayaran sudah Lunas">
+                                    ✓ Lunas
+                                </button>
+                            {% endif %}
+
+                            <!-- 3. Tombol Hapus (VR-08: hanya boleh status Diterima) -->
+                            {% if t.status_pengerjaan == 'Diterima' %}
+                                <form action="{{ url_for('transaksi_hapus', tid=t.id) }}" method="POST" style="display:inline;">
+                                    <button type="submit" class="btn btn-sm btn-danger"
+                                            onclick="return konfirmasiHapus('Hapus transaksi {{ t.kode_transaksi }}? Tindakan ini tidak dapat dibatalkan.')"
+                                            title="Hapus Transaksi (Hanya status Diterima)">
+                                        🗑️
+                                    </button>
+                                </form>
+                            {% else %}
+                                <button class="btn btn-sm btn-secondary disabled" disabled title="Hanya transaksi berstatus Diterima yang dapat dihapus">
+                                    🗑️
+                                </button>
+                            {% endif %}
+
+                            <!-- 4. Tombol Detail -->
+                            <a href="{{ url_for('transaksi_detail', tid=t.id) }}"
+                               class="btn btn-sm btn-outline" title="Lihat detail lengkap transaksi">
+                                🔍
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="table-footer">
+        Total: <strong>{{ transaksi | length }}</strong> transaksi
+        &nbsp;|&nbsp;
+        Total Pendapatan (Lunas): <strong>{{ total_lunas | rupiah }}</strong>
+    </div>
+
+    {% else %}
+    <div class="empty-state" style="padding: 48px 20px;">
+        <div class="empty-icon">📭</div>
+        <p>
+            {% if f_cari or f_status or f_bayar %}
+                Data tidak ditemukan untuk filter yang dipilih.
+                <a href="{{ url_for('transaksi_list') }}">Reset filter →</a>
+            {% else %}
+                Belum ada transaksi. <a href="{{ url_for('transaksi_tambah') }}">Buat transaksi pertama →</a>
+            {% endif %}
+        </p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

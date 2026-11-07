@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">📊 Dashboard</h1>
+    <div>
+        <a href="{{ url_for('transaksi_tambah') }}" class="btn btn-primary">➕ Transaksi Baru</a>
+        <a href="{{ url_for('pelanggan_tambah') }}" class="btn btn-outline" style="margin-left:8px;">➕ Pelanggan Baru</a>
+    </div>
+</div>
+
+<!-- ══ STAT CARDS ══ -->
+<div class="stat-grid">
+    <div class="stat-card blue">
+        <span class="stat-icon">👥</span>
+        <span class="stat-value">{{ total_pelanggan }}</span>
+        <span class="stat-label">Total Pelanggan</span>
+    </div>
+    <div class="stat-card gray">
+        <span class="stat-icon">🧾</span>
+        <span class="stat-value">{{ status_counts['Diterima'] }}</span>
+        <span class="stat-label">Diterima</span>
+    </div>
+    <div class="stat-card blue">
+        <span class="stat-icon">🔄</span>
+        <span class="stat-value">{{ status_counts['Diproses'] }}</span>
+        <span class="stat-label">Sedang Diproses</span>
+    </div>
+    <div class="stat-card green">
+        <span class="stat-icon">✅</span>
+        <span class="stat-value">{{ status_counts['Selesai'] }}</span>
+        <span class="stat-label">Selesai (Siap Ambil)</span>
+    </div>
+    <div class="stat-card purple">
+        <span class="stat-icon">📦</span>
+        <span class="stat-value">{{ status_counts['Diambil'] }}</span>
+        <span class="stat-label">Sudah Diambil</span>
+    </div>
+    <div class="stat-card orange">
+        <span class="stat-icon">📋</span>
+        <span class="stat-value">{{ total_transaksi }}</span>
+        <span class="stat-label">Total Transaksi</span>
+    </div>
+</div>
+
+<!-- ══ TABEL TRANSAKSI TERBARU ══ -->
+<div class="card">
+    <div class="card-title">
+        🕐 Transaksi Terbaru
+        <a href="{{ url_for('transaksi_list') }}"
+           style="font-size:0.8rem; font-weight:500; margin-left:auto; color:#1a3c5e;">
+            Lihat Semua →
+        </a>
+    </div>
+
+    {% if transaksi_terbaru %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID Transaksi</th>
+                    <th>Pelanggan</th>
+                    <th>Layanan</th>
+                    <th>Berat</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Bayar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in transaksi_terbaru %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('transaksi_detail', tid=t.id) }}">
+                            {{ t.kode_transaksi }}
+                        </a>
+                    </td>
+                    <td>{{ t.nama_pelanggan }}</td>
+                    <td>{{ t.nama_layanan }}</td>
+                    <td>{{ t.berat_kg }} kg</td>
+                    <td class="fw-bold">{{ t.total_harga | rupiah }}</td>
+                    <td>
+                        {% set s = t.status_pengerjaan %}
+                        <span class="badge badge-{{ s.lower().replace(' ', '-') }}">
+                            {{ s }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if t.status_pembayaran == 'Lunas' %}
+                            <span class="badge badge-lunas">✅ Lunas</span>
+                        {% else %}
+                            <span class="badge badge-belum-lunas">❌ Belum Lunas</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <p>Belum ada transaksi. <a href="{{ url_for('transaksi_tambah') }}">Buat transaksi pertama →</a></p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

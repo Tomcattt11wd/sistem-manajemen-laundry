@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% block title %}Transaksi Baru{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+    <a href="{{ url_for('transaksi_list') }}">← Kembali ke Daftar Transaksi</a>
+</div>
+
+<div class="page-header">
+    <h1 class="page-title">➕ Transaksi Baru</h1>
+</div>
+
+<div class="form-card" style="max-width: 640px;">
+
+    {# ── Ringkasan Error ── #}
+    {% if errors %}
+    <div class="error-summary" role="alert">
+        <div class="error-summary-title">⚠️ Transaksi belum dapat disimpan — mohon periksa isian berikut:</div>
+        <ul class="error-summary-list">
+            {% if errors._db %}
+                <li>{{ errors._db }}</li>
+            {% endif %}
+            {% if errors.pelanggan_id %}
+                <li><strong>Pelanggan:</strong> {{ errors.pelanggan_id }}</li>
+            {% endif %}
+            {% if errors.layanan_id %}
+                <li><strong>Jenis Layanan:</strong> {{ errors.layanan_id }}</li>
+            {% endif %}
+            {% if errors.berat_kg %}
+                <li><strong>Berat Cucian:</strong> {{ errors.berat_kg }}</li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('transaksi_tambah') }}" novalidate>
+
+        {# ── Pilih Pelanggan ── #}
+        <div class="form-group">
+            <label for="pelanggan_id">
+                Pelanggan <span class="required">*</span>
+            </label>
+            <select id="pelanggan_id" name="pelanggan_id"
+                    class="form-control {% if errors.pelanggan_id %}is-error{% endif %}">
+                <option value="">— Pilih Pelanggan —</option>
+                {% for p in pelanggan_list %}
+                <option value="{{ p.id }}"
+                    {{ 'selected' if form.get('pelanggan_id', '') == p.id | string }}>
+                    {{ p.nama }} ({{ p.no_hp }})
+                </option>
+                {% endfor %}
+            </select>
+            {% if errors.pelanggan_id %}
+                <div class="field-error">{{ errors.pelanggan_id }}</div>
+            {% else %}
+                <small>
+                    Pelanggan belum terdaftar?
+                    <a href="{{ url_for('pelanggan_tambah') }}" target="_blank">Tambah pelanggan baru →</a>
+                </small>
+            {% endif %}
+        </div>
+
+        {# ── Pilih Layanan ── #}
+        <div class="form-group">
+            <label for="layanan_id">
+                Jenis Layanan <span class="required">*</span>
+            </label>
+            <select id="layanan_id" name="layanan_id"
+                    class="form-control {% if errors.layanan_id %}is-error{% endif %}">
+                <option value="" data-tarif="0">— Pilih Jenis Layanan —</option>
+                {% for l in layanan_list %}
+                <option value="{{ l.id }}"
+                        data-tarif="{{ l.tarif_per_kg }}"
+                        {{ 'selected' if form.get('layanan_id', '') == l.id | string }}>
+                    {{ l.nama_layanan }}
+                    (Rp {{ '{:,}'.format(l.tarif_per_kg).replace(',', '.') }} / kg)
+                </option>
+                {% endfor %}
+            </select>
+            {% if errors.layanan_id %}
+                <div class="field-error">{{ errors.layanan_id }}</div>
+            {% endif %}
+            {# Info tarif muncul otomatis via JS saat layanan dipilih #}
+            <div id="tarif_info" class="tarif-info" style="display:none;"></div>
+        </div>
+
+        {# ── Berat Cucian ── #}
+        <div class="form-group">
+            <label for="berat_kg">
+                Berat Cucian <span class="required">*</span>
+            </label>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <input type="text" id="berat_kg" name="berat_kg"
+                       class="form-control {% if errors.berat_kg %}is-error{% endif %}"
+                       value="{{ form.get('berat_kg', '') }}"
+                       placeholder="Contoh: 3,5 atau 3.5"
+                       inputmode="decimal"
+                       style="max-width: 180px;">
+                <span style="font-weight:600; color:#6c757d;">kg</span>
+            </div>
+            {% if errors.berat_kg %}
+                <div class="field-error">{{ errors.berat_kg }}</div>
+            {% else %}
+                <small>Minimal 0,5 kg — Maksimal 50 kg. Gunakan koma (,) atau titik (.) sebagai desimal.</small>
+            {% endif %}
+        </div>
+
+        {# ── Total Harga (read-only, dihitung otomatis) ── #}
+        <div class="form-group">
+            <label>Total Harga <span class="optional-label">(dihitung otomatis)</span></label>
+            <div class="harga-display">
+                <div class="harga-label">Tarif × Berat</div>
+                <div class="harga-nilai" id="total_harga_display">Rp —</div>
+            </div>
+            <input type="hidden" id="total_harga" name="total_harga" value="">
+        </div>
+
+        {# ── Tanggal Masuk ── #}
+        <div class="form-group">
+            <label for="tanggal_masuk">Tanggal Masuk <span class="required">*</span></label>
+            <input type="date" id="tanggal_masuk" name="tanggal_masuk"
+                   class="form-control"
+                   value="{{ form.get('tanggal_masuk', today) }}"
+                   style="max-width: 200px;">
+        </div>
+
+        {# ── Catatan ── #}
+        <div class="form-group">
+            <label for="catatan">
+                Catatan
+                <span class="optional-label">(opsional)</span>
+            </label>
+            <textarea id="catatan" name="catatan"
+                      class="form-control"
+                      placeholder="Contoh: Pakaian kantor, tolong rapi...">{{ form.get('catatan', '') }}</textarea>
+        </div>
+
+        <div class="form-actions">
+            <a href="{{ url_for('transaksi_list') }}" class="btn btn-secondary">Batalkan</a>
+            <button type="submit" class="btn btn-primary">💾 Simpan Transaksi</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

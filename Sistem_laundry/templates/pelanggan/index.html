@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block title %}Data Pelanggan{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">👥 Data Pelanggan</h1>
+    <a href="{{ url_for('pelanggan_tambah') }}" class="btn btn-primary">➕ Tambah Pelanggan</a>
+</div>
+
+<div class="card">
+    <!-- Search bar client-side -->
+    <div style="margin-bottom: 16px;">
+        <div class="search-bar">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="cari_pelanggan"
+                   placeholder="Cari nama atau nomor HP..."
+                   autocomplete="off">
+        </div>
+    </div>
+
+    {% if pelanggan %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:50px">No</th>
+                    <th>Nama Lengkap</th>
+                    <th>Nomor HP</th>
+                    <th>Alamat</th>
+                    <th style="width:180px; text-align:center">Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="tabel_pelanggan_body">
+                {% for p in pelanggan %}
+                <tr data-searchable="{{ p.nama }} {{ p.no_hp }}">
+                    <td class="text-center text-muted">{{ loop.index }}</td>
+                    <td class="fw-bold">{{ p.nama }}</td>
+                    <td>{{ p.no_hp }}</td>
+                    <td class="text-muted">{{ p.alamat or '—' }}</td>
+                    <td class="text-center">
+                        <div style="display:inline-flex; gap:6px; align-items:center; justify-content:center;">
+                            <!-- Tombol Ubah / Edit Pelanggan -->
+                            <a href="{{ url_for('pelanggan_edit', pid=p.id) }}"
+                               class="btn btn-sm btn-warning" title="Ubah Data Pelanggan">
+                                ✏️ Ubah
+                            </a>
+                            <!-- Tombol Hapus Pelanggan -->
+                            <form action="{{ url_for('pelanggan_hapus', pid=p.id) }}"
+                                  method="POST" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-danger"
+                                        onclick="return konfirmasiHapus('Hapus pelanggan {{ p.nama }}?')"
+                                        title="Hapus Pelanggan">
+                                    🗑️ Hapus
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                <!-- Baris saat filter pencarian tidak menemukan hasil -->
+                <tr id="row_kosong_pelanggan" style="display:none;">
+                    <td colspan="5">
+                        <div class="empty-state" style="padding: 20px;">
+                            <p>🔍 Data tidak ditemukan.</p>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="table-footer">Total: {{ pelanggan | length }} pelanggan terdaftar</div>
+
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">👤</div>
+        <p>Belum ada pelanggan. <a href="{{ url_for('pelanggan_tambah') }}">Tambah pelanggan pertama →</a></p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
